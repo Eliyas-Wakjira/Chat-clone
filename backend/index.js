@@ -10,6 +10,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Root test route backend sirriitti hojjechuu isaa mirkaneessuuf
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'ChatGPT Clone Backend API is running smoothly!',
+    timestamp: new Date()
+  });
+});
+
 // /api + /chat + /ask => /api/chat/ask
 // /api + /chat + /conversations => /api/chat/conversations
 app.use('/api', mainRouter);
