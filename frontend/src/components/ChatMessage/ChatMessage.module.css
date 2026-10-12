@@ -1,0 +1,78 @@
+.messageWrapper {
+  display: flex;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* User Message: Mirga irratti bubble dhihaata */
+.userRow {
+  justify-content: flex-end;
+}
+
+.userBubble {
+  background-color: #2f2f2f;
+  color: #ececec;
+  padding: 10px 16px;
+  border-radius: 18px;
+  max-width: 70%;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* Assistant Message: Bitaa irratti Markdown formatted text */
+.assistantRow {
+  justify-content: flex-start;
+}
+
+.assistantText {
+  color: #d1d5db;
+  max-width: 85%;
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Markdown Custom Styling */
+.assistantText p {
+  margin-bottom: 12px;
+}
+
+.assistantText h1, 
+.assistantText h2, 
+.assistantText h3, 
+.assistantText h4 {
+  color: #ffffff;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.assistantText ul, 
+.assistantText ol {
+  margin-left: 20px;
+  margin-bottom: 12px;
+}
+
+.assistantText code {
+  background-color: #1e1e1e;
+  color: #f8f8f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.assistantText pre {
+  background-color: #1e1e1e;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.assistantText pre code {
+  background: transparent;
+  padding: 0;
+}
