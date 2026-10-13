@@ -42,12 +42,14 @@ body {
 .sidebar {
   width: 260px;
   flex-shrink: 0;
+  min-height: 0;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  overflow: hidden;
   transition: transform 0.25s ease;
 }
 
@@ -105,6 +107,7 @@ body {
 }
 
 .recent-chats h3 {
+  flex-shrink: 0;
   padding: 8px 12px;
   color: var(--text-secondary);
   font-size: 12px;
@@ -113,12 +116,33 @@ body {
 
 .recent-chat-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  min-height: 0;
   gap: 2px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #505050 transparent;
+  scrollbar-width: thin;
+}
+
+.recent-chat-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recent-chat-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recent-chat-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #505050;
+  background-clip: padding-box;
 }
 
 .recent-chat {
+  flex: 0 0 auto;
   overflow: hidden;
   padding: 9px 12px;
   border: 0;
