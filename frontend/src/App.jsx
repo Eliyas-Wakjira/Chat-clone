@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import './App.css';
 
+// Base API URL Dynamic Gochuu (.env irraa dubbisa, yoo dhabame production backend fayyadama)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://chatgpt.eliyastech.com/api';
+
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -18,7 +21,7 @@ function App() {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get('http://localhost:3888/api/chat/history');
+      const res = await axios.get(`${API_BASE_URL}/chat/history`);
       if (res.data.success) {
         setMessages(res.data.messages);
       }
@@ -40,7 +43,7 @@ function App() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:3888/api/chat/ask', {
+      const res = await axios.post(`${API_BASE_URL}/chat/ask`, {
         prompt: userPrompt,
       });
 
