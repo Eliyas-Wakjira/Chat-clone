@@ -52,10 +52,16 @@ export const askChat = async (req, res) => {
 };
 
 export const getConversations = async (req, res) => {
+  const { userId } = req.query;
   try {
-    const [rows] = await db.query(
-      'SELECT id, role, content FROM conversations ORDER BY id ASC'
-    );
+    const [rows] = userId
+      ? await db.query(
+          'SELECT id, role, content FROM conversations WHERE user_id = ? ORDER BY id ASC',
+          [userId]
+        )
+      : await db.query(
+          'SELECT id, role, content FROM conversations ORDER BY id ASC'
+        );
 
     return res.status(200).json({
       success: true,

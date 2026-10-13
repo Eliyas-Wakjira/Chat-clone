@@ -1,18 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import axiosInstance from '../../axios';
 
-export default function AuthModal({ isOpen, initialMode = 'login', onClose, onAuthSuccess }) {
+export default function AuthModal({
+  isOpen,
+  initialMode = 'login',
+  onClose,
+  onAuthSuccess,
+}) {
   const [isLogin, setIsLogin] = useState(initialMode !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Modal yeroo banamu mode (login/signup) sirriitti jijjiiruu
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(initialMode !== 'signup');
+      setError('');
+    }
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     const endpoint = isLogin ? '/auth/login' : '/auth/register';
     const payload = isLogin
@@ -29,20 +45,36 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onAu
         }
         if (onAuthSuccess) onAuthSuccess(response.data.user || null);
         if (onClose) onClose();
-        window.location.reload();
+      } else {
+        setError('Server token hin deebisne. Maaloo irra deebi\'ii yaali.');
       }
     } catch (err) {
       console.error('Auth Error Response:', err.response?.data);
-      setError(err.response?.data?.error || err.response?.data?.message || 'Authentication failed');
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          'Authentication failed'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="modal-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
+
         <h2>{isLogin ? 'Login' : 'Register'}</h2>
 
-        {error && <p style={{ color: '#ff4d4d', marginBottom: '10px' }}>{error}</p>}
+        {error && <p className="modal-error">{error}</p>}
 
         <form onSubmit={handleSubmit}>
           {!isLogin && (
@@ -59,6 +91,7 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onAu
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
             required
           />
           <input
@@ -66,19 +99,24 @@ export default function AuthModal({ isOpen, initialMode = 'login', onClose, onAu
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete={isLogin ? 'current-password' : 'new-password'}
             required
           />
-          <button type="submit">{isLogin ? 'Sign In' : 'Sign Up'}</button>
+          <button type="submit" disabled={loading}>
+            {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Sign Up'}
+          </button>
         </form>
 
         <p
+          className="modal-toggle"
           onClick={() => {
             setIsLogin(!isLogin);
             setError('');
           }}
-          style={{ cursor: 'pointer', marginTop: '12px' }}
         >
-          {isLogin ? "Account hin qabduu? Register godhi" : 'Account qabdaa? Login godhi'}
+          {isLogin
+            ? "Account hin qabduu? Register godhi"
+            : 'Account qabdaa? Login godhi'}
         </p>
       </div>
     </div>
