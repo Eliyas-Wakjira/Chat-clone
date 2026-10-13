@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import {
   SquarePen,
   Search,
@@ -18,10 +18,8 @@ import {
   User,
 } from 'lucide-react';
 import AuthModal from './components/AuthModal/AuthModal';
+import API from './axios';
 import './App.css';
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'https://chatgpt.eliyastech.com/api';
 
 function readStoredUser() {
   try {
@@ -32,40 +30,110 @@ function readStoredUser() {
   }
 }
 
+function getApiErrorMessage(err, fallback) {
+  if (typeof err.response?.data?.error === 'string') {
+    return err.response.data.error;
+  }
+  if (err.response) {
+    return `${fallback} (API returned HTTP ${err.response.status}).`;
+  }
+  if (err.request) {
+    return 'Could not reach the chat server. Check that the API is running and try again.';
+  }
+  return err.message || fallback;
+}
+
 function App() {
   const [messages, setMessages] = useState([]);
+  const [recentConversations, setRecentConversations] = useState([]);
+  const [historyError, setHistoryError] = useState('');
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [user, setUser] = useState(readStoredUser);
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [conversationId, setConversationId] = useState(() => {
+    const existingId = localStorage.getItem('conversationId');
+    if (existingId) return existingId;
+    const newId = crypto.randomUUID();
+    localStorage.setItem('conversationId', newId);
+    return newId;
+  });
 
   const messagesEndRef = useRef(null);
   const token = localStorage.getItem('token');
-
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
   useEffect(() => {
-    fetchHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let isCurrent = true;
+    API.get('/chat/history', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      params: {
+        conversationId,
+        ...(user?.id ? { userId: user.id } : {}),
+      },
+    })
+      .then((res) => {
+        if (isCurrent && res.data.success) {
+          setMessages(res.data.messages);
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching history:', err);
+        if (isCurrent) {
+          setError(getApiErrorMessage(err, 'Could not load chat history.'));
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user?.id, conversationId, token]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    API.get('/chat/conversations', {
+      params: user?.id ? { userId: user.id } : {},
+    })
+      .then((res) => {
+        if (isCurrent && res.data.success) {
+          setRecentConversations(res.data.conversations);
+          setHistoryError('');
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching recent conversations:', err);
+        if (isCurrent) {
+          setHistoryError(getApiErrorMessage(err, 'Could not load recent chats.'));
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user?.id, token, historyRefresh]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const fetchHistory = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/chat/history`, {
-        headers: authHeaders,
-        params: user?.id ? { userId: user.id } : {},
-      });
-      if (res.data.success) {
-        setMessages(res.data.messages);
-      }
-    } catch (err) {
-      console.error('Error fetching history:', err);
-    }
+  const handleNewChat = () => {
+    const newId = crypto.randomUUID();
+    localStorage.setItem('conversationId', newId);
+    setConversationId(newId);
+    setMessages([]);
+    setError('');
+    setInput('');
+    setSidebarOpen(false);
+  };
+
+  const handleSelectConversation = (id) => {
+    localStorage.setItem('conversationId', id);
+    setConversationId(id);
+    setError('');
+    setSidebarOpen(false);
   };
 
   const openAuth = (mode) => {
@@ -78,6 +146,7 @@ function App() {
     localStorage.removeItem('user');
     setUser(null);
     setMessages([]);
+    handleNewChat();
   };
 
   const handleAuthSuccess = (userData) => {
@@ -93,22 +162,31 @@ function App() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setError('');
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/chat/ask`,
-        { prompt: userPrompt, userId: user?.id || null },
+      const res = await API.post(
+        '/chat/ask',
+        {
+          prompt: userPrompt,
+          userId: user?.id || null,
+          conversationId,
+          history: messages.slice(-20).map(({ role, content }) => ({ role, content })),
+        },
         { headers: authHeaders }
       );
 
       if (res.data.success) {
         const aiMessage = { role: 'assistant', content: res.data.message };
         setMessages((prev) => [...prev, aiMessage]);
+        setHistoryRefresh((refresh) => refresh + 1);
+      } else {
+        setError(res.data.error || 'The chat server could not generate a response.');
       }
     } catch (err) {
       console.error('Error sending message:', err);
-      alert(err.response?.data?.error || 'Failed to generate response');
+      setError(getApiErrorMessage(err, 'Failed to generate a response. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -127,7 +205,7 @@ function App() {
       {/* Left Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-top">
-          <button className="new-chat-btn" onClick={() => setSidebarOpen(false)}>
+          <button className="new-chat-btn" onClick={handleNewChat}>
             <SquarePen size={18} />
             <span>New chat</span>
           </button>
@@ -148,6 +226,28 @@ function App() {
           <div className="nav-item"><Code size={18} /><span>Codex</span></div>
           <div className="nav-item"><Folder size={18} /><span>Projects</span></div>
         </nav>
+
+        <section className="recent-chats" aria-label="Recent chats">
+          <h3>Recent chats</h3>
+          {historyError ? (
+            <p className="history-status" role="alert">{historyError}</p>
+          ) : recentConversations.length ? (
+            <div className="recent-chat-list">
+              {recentConversations.map((conversation) => (
+                <button
+                  key={conversation.conversationId}
+                  className={`recent-chat${conversation.conversationId === conversationId ? ' active' : ''}`}
+                  onClick={() => handleSelectConversation(conversation.conversationId)}
+                  title={conversation.title || 'New chat'}
+                >
+                  {conversation.title || 'New chat'}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="history-status">Your recent chats will appear here.</p>
+          )}
+        </section>
       </aside>
 
       {/* Main Chat Content Area */}
@@ -193,6 +293,7 @@ function App() {
         </header>
 
         <div className="chat-messages">
+          {error && <div className="chat-error" role="alert">{error}</div>}
           {messages.length === 0 ? (
             <div className="empty-state">
               <h1>What's on your mind today?</h1>
@@ -206,7 +307,11 @@ function App() {
                 <div className="message-header">
                   <strong>{msg.role === 'user' ? 'You:' : 'ChatGPT:'}</strong>
                 </div>
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content">
+                  {msg.role === 'assistant' ? (
+                    <ReactMarkdown>{msg.content || ''}</ReactMarkdown>
+                  ) : msg.content}
+                </div>
               </div>
             ))
           )}
