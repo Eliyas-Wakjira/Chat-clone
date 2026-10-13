@@ -44,7 +44,10 @@ export const testConnection = async () => {
     );
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error.message);
+    console.error(
+      'Database connection failed:',
+      error.code || error.message || error
+    );
     return false;
   }
 };

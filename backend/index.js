@@ -11,7 +11,9 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 
-app.use(cors());
+// CORS: allow all by default, or restrict to CORS_ORIGIN (comma-separated) when set
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(cors(corsOrigin ? { origin: corsOrigin.split(',').map((o) => o.trim()) } : {}));
 app.use(express.json());
 
 // Root test route
