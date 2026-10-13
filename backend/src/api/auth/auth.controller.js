@@ -1,5 +1,5 @@
 import db from '../../../db/db.config.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 // 1. SIGNUP EXPORT
@@ -29,7 +29,8 @@ export const signup = async (req, res) => {
       user: { id: result.insertId, name: username || email.split('@')[0], email },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    const message = error.code || error.message || 'Database error';
+    return res.status(500).json({ success: false, error: message });
   }
 };
 
@@ -60,6 +61,7 @@ export const login = async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    const message = error.code || error.message || 'Database error';
+    return res.status(500).json({ success: false, error: message });
   }
 };
